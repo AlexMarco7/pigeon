@@ -143,6 +143,7 @@ func connectOnMongo() *mongo.Client {
 		log.Println("Trying again...")
 		return connectOnMongo()
 	} else {
+		log.Println("Connected!")
 		return client
 	}
 }
