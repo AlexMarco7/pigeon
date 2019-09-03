@@ -21,7 +21,7 @@ import (
 
 func Start() {
 	godotenv.Load()
-	connectOnMongo()
+	mongoClient = connectOnMongo()
 	httpServer()
 	wait()
 }
