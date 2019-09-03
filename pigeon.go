@@ -20,6 +20,10 @@ import (
 )
 
 func main() {
+	Start()
+}
+
+func Start() {
 	godotenv.Load()
 	connectOnMongo()
 	httpServer()
