@@ -1,4 +1,4 @@
-package main
+package pigeon
 
 import (
 	"bytes"
@@ -18,10 +18,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/olebedev/go-duktape.v3"
 )
-
-func main() {
-	Start()
-}
 
 func Start() {
 	godotenv.Load()
