@@ -128,7 +128,7 @@ var mongoClient *mongo.Client
 func connectOnMongo() *mongo.Client {
 	log.Println("Connecting on MongoDB...")
 	opt := &options.ClientOptions{}
-	client, err := mongo.NewClient(opt.ApplyURI(os.Getenv("MONGO_DSN")))
+	client, err := mongo.NewClient(opt.ApplyURI(os.Getenv("MONGODB_DSN")))
 	check(err)
 
 	err = client.Connect(context.TODO())
@@ -148,7 +148,7 @@ func connectOnMongo() *mongo.Client {
 }
 
 func runCommand(commandStr string) interface{} {
-	db := mongoClient.Database(os.Getenv("MONGO_DB"))
+	db := mongoClient.Database(os.Getenv("MONGODB_DATABASE"))
 
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Minute)
 
