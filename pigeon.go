@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/joho/godotenv"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/bson"
@@ -19,7 +20,8 @@ import (
 )
 
 func main() {
-	//	connectOnMongo()
+	godotenv.Load()
+	connectOnMongo()
 	httpServer()
 	wait()
 }
