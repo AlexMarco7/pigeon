@@ -12,11 +12,13 @@ import (
 
 	"github.com/joho/godotenv"
 	routing "github.com/qiangxue/fasthttp-routing"
+	"gopkg.in/olebedev/go-duktape.v3"
+
+	//"github.com/robertkrimen/otto"
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"gopkg.in/olebedev/go-duktape.v3"
 )
 
 func Start() {
@@ -26,14 +28,44 @@ func Start() {
 	wait()
 }
 
+/*
+func run(query string, data interface{}) (interface{}, error) {
+	path := os.Getenv("QUERY_PATH")
+	if path == "" {
+		path = "./query"
+	}
+
+	filepath := path + "/" + query + ".js"
+
+	vm := otto.New()
+	vm.Set("exec", func(call otto.FunctionCall) otto.Value {
+		result, _ := vm.ToValue(runCommand(call.Argument(0).ToString(-1)))
+		return result
+	})
+	vm.Run(`
+	    result = JSON.stringify(transform(exec(JSON.stringify(command(` + dataStr + `)))))
+	`)
+
+	if value, err := vm.Get("result"); err == nil {
+		if valueStr, err := value.ToString(); err == nil {
+			return valueStr, nil
+		}
+	}
+
+	return nil, nil
+}
+*/
+
 func run(query string, data interface{}) (interface{}, error) {
 	ctx := duktape.New()
 
-	c := make(chan interface{}, 1)
-
 	ctx.PushGlobalGoFunction("exec", func(ctx *duktape.Context) int {
-		c <- runCommand(ctx.SafeToString(-1))
-		return 0
+		params := ctx.SafeToString(-1)
+		result := runCommand(params)
+		js, _ := json.Marshal(result)
+		str := string(js)
+		ctx.PushString(str)
+		return 1
 	})
 
 	path := os.Getenv("QUERY_PATH")
@@ -62,7 +94,11 @@ func run(query string, data interface{}) (interface{}, error) {
 		dataStr = string(dataBt)
 	}
 
-	err = ctx.PevalString(`exec(JSON.stringify(command(` + dataStr + `)))`)
+	err = ctx.PevalString(`
+	   JSON.stringify(transform(JSON.parse(exec(JSON.stringify(command(` + dataStr + `))))))
+	`)
+
+	result := ctx.GetString(-1)
 
 	if err != nil {
 		return nil, err
@@ -71,7 +107,7 @@ func run(query string, data interface{}) (interface{}, error) {
 	ctx.Pop()
 	ctx.DestroyHeap()
 
-	return <-c, nil
+	return result, nil
 }
 
 func httpServer() {
@@ -101,15 +137,7 @@ func httpServer() {
 			return nil
 		}
 
-		responseBody, err := json.Marshal(result)
-
-		if checkError(ctx, err) {
-			return nil
-		}
-
-		ctx.SetBody(responseBody)
-		ctx.SetStatusCode(fasthttp.StatusOK)
-
+		ctx.Success("application/json", []byte(result.(string)))
 		return nil
 	})
 
@@ -156,10 +184,22 @@ func runCommand(commandStr string) interface{} {
 	command := bson.M{}
 	json.Unmarshal([]byte(commandStr), &command)
 
-	result := db.RunCommand(ctx, command, &options.RunCmdOptions{})
+	orderedCommand := bson.D{}
+	for k, v := range command {
+		if k == "aggregate" {
+			orderedCommand = append(orderedCommand, bson.E{k, v})
+		}
+	}
+	for k, v := range command {
+		if k != "aggregate" {
+			orderedCommand = append(orderedCommand, bson.E{k, v})
+		}
+	}
+
+	result := db.RunCommand(ctx, orderedCommand, &options.RunCmdOptions{})
 	check(result.Err())
 
-	ret := map[string]interface{}{}
+	var ret bson.M
 	result.Decode(&ret)
 
 	return ret
