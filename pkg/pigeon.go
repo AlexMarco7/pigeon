@@ -28,34 +28,6 @@ func Start() {
 	wait()
 }
 
-/*
-func run(query string, data interface{}) (interface{}, error) {
-	path := os.Getenv("QUERY_PATH")
-	if path == "" {
-		path = "./query"
-	}
-
-	filepath := path + "/" + query + ".js"
-
-	vm := otto.New()
-	vm.Set("exec", func(call otto.FunctionCall) otto.Value {
-		result, _ := vm.ToValue(runCommand(call.Argument(0).ToString(-1)))
-		return result
-	})
-	vm.Run(`
-	    result = JSON.stringify(transform(exec(JSON.stringify(command(` + dataStr + `)))))
-	`)
-
-	if value, err := vm.Get("result"); err == nil {
-		if valueStr, err := value.ToString(); err == nil {
-			return valueStr, nil
-		}
-	}
-
-	return nil, nil
-}
-*/
-
 func run(query string, data interface{}) (interface{}, error) {
 	ctx := duktape.New()
 
@@ -66,6 +38,11 @@ func run(query string, data interface{}) (interface{}, error) {
 		str := string(js)
 		ctx.PushString(str)
 		return 1
+	})
+
+	ctx.PushGlobalGoFunction("log", func(c *duktape.Context) int {
+		fmt.Println(c.SafeToString(-1))
+		return 0
 	})
 
 	path := os.Getenv("QUERY_PATH")
