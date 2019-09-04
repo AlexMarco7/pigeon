@@ -116,17 +116,19 @@ func httpServer() {
 	router.Use(corsHandler(), logHandler(), panicHandler())
 
 	router.Any("/<query>", func(ctx *routing.Context) error {
-		payload := string(ctx.PostBody())
+		body := map[string]interface{}{}
 
-		if payload == "" {
-			payload = "{}"
-		}
+		if ctx.IsPost() || ctx.IsPut() {
+			payload := string(ctx.PostBody())
+			err := json.Unmarshal([]byte(payload), &body)
 
-		var body interface{}
-		err := json.Unmarshal([]byte(payload), &body)
-
-		if checkError(ctx, err) {
-			return nil
+			if checkError(ctx, err) {
+				return nil
+			}
+		} else {
+			ctx.QueryArgs().VisitAll(func(key, value []byte) {
+				body[string(key)] = string(value)
+			})
 		}
 
 		queryFile := ctx.Param("query")
