@@ -12,6 +12,7 @@ import (
 
 	"github.com/joho/godotenv"
 	routing "github.com/qiangxue/fasthttp-routing"
+	"github.com/spf13/cast"
 	"gopkg.in/olebedev/go-duktape.v3"
 
 	//"github.com/robertkrimen/otto"
@@ -163,6 +164,9 @@ func runCommand(commandStr string) interface{} {
 	command := bson.M{}
 	json.Unmarshal([]byte(commandStr), &command)
 
+	cmdMap := map[string]interface{}(command)
+	checkDates(&cmdMap)
+
 	orderedCommand := bson.D{}
 	for k, v := range command {
 		if k == "aggregate" {
@@ -175,6 +179,8 @@ func runCommand(commandStr string) interface{} {
 		}
 	}
 
+	log.Printf("%#v", orderedCommand)
+
 	result := db.RunCommand(ctx, orderedCommand, &options.RunCmdOptions{})
 	check(result.Err())
 
@@ -182,6 +188,41 @@ func runCommand(commandStr string) interface{} {
 	result.Decode(&ret)
 
 	return ret
+}
+
+func checkDates(src interface{}) {
+	switch (src).(type) {
+	case map[string]interface{}:
+		for k, v := range (src).(map[string]interface{}) {
+			fmt.Printf("%T\n", v)
+			switch v.(type) {
+			case []interface{}:
+				{
+					for _, i := range v.([]interface{}) {
+						switch i.(type) {
+						case map[string]interface{}:
+							{
+								m := i.(map[string]interface{})
+								checkDates(&m)
+							}
+						}
+					}
+				}
+			case map[string]interface{}:
+				{
+					m := v.(map[string]interface{})
+					checkDates(&m)
+				}
+			case string:
+				{
+					if k == "$toDate" {
+						dt := cast.ToTime(v)
+						src = &dt
+					}
+				}
+			}
+		}
+	}
 }
 
 func check(err error) {
