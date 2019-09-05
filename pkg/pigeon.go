@@ -106,8 +106,7 @@ func render(view string, data string) string {
 
 	filepath := path + "/" + view + ".html"
 
-	html := ""
-	buf := bytes.NewBufferString(html)
+	var tpl bytes.Buffer
 
 	tmpl, err := template.ParseFiles(filepath)
 
@@ -115,9 +114,9 @@ func render(view string, data string) string {
 		return err.Error()
 	}
 
-	tmpl.Execute(buf, data)
+	tmpl.Execute(&tpl, data)
 
-	return html
+	return tpl.String()
 }
 
 func run(query string, data interface{}) (interface{}, error) {
