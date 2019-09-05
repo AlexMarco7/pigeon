@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -27,6 +28,96 @@ func Start() {
 	mongoClient = connectOnMongo()
 	httpServer()
 	wait()
+}
+
+func httpServer() {
+	router := routing.New()
+
+	router.Use(corsHandler(), logHandler(), panicHandler())
+
+	router.Any("/<query>", func(ctx *routing.Context) error {
+		body := map[string]interface{}{}
+
+		if ctx.IsPost() || ctx.IsPut() {
+			payload := string(ctx.PostBody())
+			err := json.Unmarshal([]byte(payload), &body)
+
+			if checkError(ctx, err) {
+				return nil
+			}
+		} else {
+			ctx.QueryArgs().VisitAll(func(key, value []byte) {
+				body[string(key)] = string(value)
+			})
+		}
+
+		queryFile := ctx.Param("query")
+
+		result, err := run(queryFile, body)
+
+		if checkError(ctx, err) {
+			return nil
+		}
+
+		ctx.Success("application/json", []byte(result.(string)))
+		return nil
+	})
+
+	router.Any("/<query>/<view>", func(ctx *routing.Context) error {
+		body := map[string]interface{}{}
+
+		if ctx.IsPost() || ctx.IsPut() {
+			payload := string(ctx.PostBody())
+			err := json.Unmarshal([]byte(payload), &body)
+
+			if checkError(ctx, err) {
+				return nil
+			}
+		} else {
+			ctx.QueryArgs().VisitAll(func(key, value []byte) {
+				body[string(key)] = string(value)
+			})
+		}
+
+		queryFile := ctx.Param("query")
+
+		result, err := run(queryFile, body)
+
+		if checkError(ctx, err) {
+			return nil
+		}
+
+		view := ctx.Param("view")
+
+		html := render(view, result.(string))
+
+		ctx.Success("text/html", []byte(html))
+		return nil
+	})
+
+	fasthttp.ListenAndServe("0.0.0.0:8080", router.HandleRequest)
+}
+
+func render(view string, data string) string {
+	path := os.Getenv("VIEW_PATH")
+	if path == "" {
+		path = "./view"
+	}
+
+	filepath := path + "/" + view + ".html"
+
+	html := ""
+	buf := bytes.NewBufferString(html)
+
+	tmpl, err := template.ParseFiles(filepath)
+
+	if err != nil {
+		return err.Error()
+	}
+
+	tmpl.Execute(buf, data)
+
+	return html
 }
 
 func run(query string, data interface{}) (interface{}, error) {
@@ -88,42 +179,6 @@ func run(query string, data interface{}) (interface{}, error) {
 	return result, nil
 }
 
-func httpServer() {
-	router := routing.New()
-
-	router.Use(corsHandler(), logHandler(), panicHandler())
-
-	router.Any("/<query>", func(ctx *routing.Context) error {
-		body := map[string]interface{}{}
-
-		if ctx.IsPost() || ctx.IsPut() {
-			payload := string(ctx.PostBody())
-			err := json.Unmarshal([]byte(payload), &body)
-
-			if checkError(ctx, err) {
-				return nil
-			}
-		} else {
-			ctx.QueryArgs().VisitAll(func(key, value []byte) {
-				body[string(key)] = string(value)
-			})
-		}
-
-		queryFile := ctx.Param("query")
-
-		result, err := run(queryFile, body)
-
-		if checkError(ctx, err) {
-			return nil
-		}
-
-		ctx.Success("application/json", []byte(result.(string)))
-		return nil
-	})
-
-	fasthttp.ListenAndServe("0.0.0.0:8080", router.HandleRequest)
-}
-
 func wait() {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -159,7 +214,7 @@ func connectOnMongo() *mongo.Client {
 func runCommand(commandStr string) interface{} {
 	db := mongoClient.Database(os.Getenv("MONGODB_DATABASE"))
 
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Minute)
 
 	command := bson.M{}
 	json.Unmarshal([]byte(commandStr), &command)
@@ -179,7 +234,7 @@ func runCommand(commandStr string) interface{} {
 		}
 	}
 
-	//log.Printf("%#v", orderedCommand)
+	log.Printf("%#v", orderedCommand)
 
 	result := db.RunCommand(ctx, orderedCommand, &options.RunCmdOptions{})
 	check(result.Err())
@@ -254,7 +309,7 @@ func logHandler() routing.Handler {
 		log.Println("Request Body: ", string(c.PostBody()))
 		r := c.Next()
 		log.Println("Response Status: ", c.Response.StatusCode())
-		//log.Println("Response Body: ", string(c.Response.Body()))
+		log.Println("Response Body: ", string(c.Response.Body()))
 		return r
 	}
 }

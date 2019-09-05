@@ -8,6 +8,7 @@ require (
 	github.com/klauspost/cpuid v1.2.1 // indirect
 	github.com/qiangxue/fasthttp-routing v0.0.0-20160225050629-6ccdc2a18d87
 	github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d // indirect
+	github.com/thedevsaddam/renderer v1.2.0 // indirect
 	github.com/valyala/fasthttp v1.4.0
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
@@ -19,4 +20,5 @@ require (
 	golang.org/x/tools v0.0.0-20190903163617-be0da057c5e3 // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
+	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
