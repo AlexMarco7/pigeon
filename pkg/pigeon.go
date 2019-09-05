@@ -165,21 +165,21 @@ func runCommand(commandStr string) interface{} {
 	json.Unmarshal([]byte(commandStr), &command)
 
 	cmdMap := map[string]interface{}(command)
-	checkDates(&cmdMap)
+	cmdMap = checkDates(&cmdMap).(map[string]interface{})
 
 	orderedCommand := bson.D{}
-	for k, v := range command {
+	for k, v := range cmdMap {
 		if k == "aggregate" {
 			orderedCommand = append(orderedCommand, bson.E{k, v})
 		}
 	}
-	for k, v := range command {
+	for k, v := range cmdMap {
 		if k != "aggregate" {
 			orderedCommand = append(orderedCommand, bson.E{k, v})
 		}
 	}
 
-	log.Printf("%#v", orderedCommand)
+	//log.Printf("%#v", orderedCommand)
 
 	result := db.RunCommand(ctx, orderedCommand, &options.RunCmdOptions{})
 	check(result.Err())
@@ -190,20 +190,20 @@ func runCommand(commandStr string) interface{} {
 	return ret
 }
 
-func checkDates(src interface{}) {
+func checkDates(src interface{}) interface{} {
 	switch (src).(type) {
-	case map[string]interface{}:
-		for k, v := range (src).(map[string]interface{}) {
-			fmt.Printf("%T\n", v)
+	case *map[string]interface{}:
+		p := (src).(*map[string]interface{})
+		for k, v := range *p {
 			switch v.(type) {
 			case []interface{}:
 				{
-					for _, i := range v.([]interface{}) {
+					for idx, i := range v.([]interface{}) {
 						switch i.(type) {
 						case map[string]interface{}:
 							{
 								m := i.(map[string]interface{})
-								checkDates(&m)
+								v.([]interface{})[idx] = checkDates(&m)
 							}
 						}
 					}
@@ -211,18 +211,20 @@ func checkDates(src interface{}) {
 			case map[string]interface{}:
 				{
 					m := v.(map[string]interface{})
-					checkDates(&m)
+					(*p)[k] = checkDates(&m)
 				}
 			case string:
 				{
 					if k == "$toDate" {
 						dt := cast.ToTime(v)
-						src = &dt
+						return dt
 					}
 				}
 			}
 		}
+		return *p
 	}
+	return nil
 }
 
 func check(err error) {
