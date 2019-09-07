@@ -1,6 +1,6 @@
 package main
 
-import pigeon "github.com/alexMarco7/pigeon/pkg"
+import pigeon "github.com/alexmarco7/pigeon/pkg"
 
 func main() {
 	pigeon.Start()
