@@ -163,7 +163,7 @@ func run(query string, data interface{}) (interface{}, error) {
 	}
 
 	err = ctx.PevalString(`
-	   JSON.stringify(transform(JSON.parse(exec(JSON.stringify(command(` + dataStr + `))))))
+	   JSON.stringify(transform(JSON.parse(exec(JSON.stringify(command(` + dataStr + `)))),` + dataStr + `))
 	`)
 
 	result := ctx.GetString(-1)
@@ -211,6 +211,11 @@ func connectOnMongo() *mongo.Client {
 }
 
 func runCommand(commandStr string) interface{} {
+
+	if commandStr == "null" || commandStr == "" {
+		return nil
+	}
+
 	db := mongoClient.Database(os.Getenv("MONGODB_DATABASE"))
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Minute)
