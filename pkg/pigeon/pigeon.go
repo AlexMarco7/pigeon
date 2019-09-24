@@ -322,9 +322,10 @@ func panicHandler() routing.Handler {
 	return func(c *routing.Context) (err error) {
 		defer func() {
 			if e := recover(); e != nil {
-				c.Response.Header.SetStatusCode(fasthttp.StatusInternalServerError)
 				eStr := fmt.Sprintf("%v", e)
-				c.SetBody([]byte(eStr))
+				responseBody, _ := json.Marshal(map[string]string{"error": eStr})
+				c.SetBody(responseBody)
+				c.SetStatusCode(fasthttp.StatusInternalServerError)
 			}
 		}()
 
