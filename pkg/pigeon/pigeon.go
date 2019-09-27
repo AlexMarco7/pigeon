@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"go.mongodb.org/mongo-driver/mongo/readpref"
+
 	"github.com/joho/godotenv"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/spf13/cast"
@@ -189,7 +191,9 @@ var mongoClient *mongo.Client
 
 func connectOnMongo() *mongo.Client {
 	log.Println("Connecting on MongoDB...")
-	opt := &options.ClientOptions{}
+	opt := &options.ClientOptions{
+		ReadPreference: readpref.SecondaryPreferred(),
+	}
 	client, err := mongo.NewClient(opt.ApplyURI(os.Getenv("MONGODB_DSN")))
 	check(err)
 
