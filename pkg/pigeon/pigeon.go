@@ -11,8 +11,6 @@ import (
 	"text/template"
 	"time"
 
-	"go.mongodb.org/mongo-driver/mongo/readpref"
-
 	"github.com/joho/godotenv"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/spf13/cast"
@@ -191,9 +189,7 @@ var mongoClient *mongo.Client
 
 func connectOnMongo() *mongo.Client {
 	log.Println("Connecting on MongoDB...")
-	opt := &options.ClientOptions{
-		ReadPreference: readpref.SecondaryPreferred(),
-	}
+	opt := &options.ClientOptions{}
 	client, err := mongo.NewClient(opt.ApplyURI(os.Getenv("MONGODB_DSN")))
 	check(err)
 
@@ -222,7 +218,7 @@ func runCommand(commandStr string) interface{} {
 
 	db := mongoClient.Database(os.Getenv("MONGODB_DATABASE"))
 
-	ctx, _ := context.WithTimeout(context.Background(), 20*time.Minute)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Minute)
 
 	command := bson.M{}
 	json.Unmarshal([]byte(commandStr), &command)
@@ -244,11 +240,18 @@ func runCommand(commandStr string) interface{} {
 
 	log.Printf("%#v", orderedCommand)
 
-	result := db.RunCommand(ctx, orderedCommand, &options.RunCmdOptions{})
-	check(result.Err())
+	cur, err := db.RunCommandCursor(ctx, orderedCommand, &options.RunCmdOptions{})
+	check(err)
 
-	var ret bson.M
-	result.Decode(&ret)
+	ret := bson.A{}
+
+	defer cur.Close(ctx)
+	for cur.Next(ctx) {
+		var item bson.M
+		err := cur.Decode(&item)
+		ret = append(ret, item)
+		check(err)
+	}
 
 	return ret
 }
