@@ -217,8 +217,9 @@ func runCommand(commandStr string) interface{} {
 	}
 
 	db := mongoClient.Database(os.Getenv("MONGODB_DATABASE"))
+	timeout := cast.ToInt(os.Getenv("MONGODB_TIMEOUT"))
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Minute)
 
 	command := bson.M{}
 	json.Unmarshal([]byte(commandStr), &command)
