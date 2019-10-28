@@ -189,7 +189,7 @@ var mongoClient *mongo.Client
 
 func connectOnMongo() *mongo.Client {
 	log.Println("Connecting on MongoDB...")
-	timeout := time.Duration(cast.ToInt(os.Getenv("MONGODB_TIMEOUT")))
+	timeout := time.Duration(cast.ToInt(os.Getenv("MONGODB_TIMEOUT"))) * time.Minute
 	opt := &options.ClientOptions{
 		ConnectTimeout:    &timeout,
 		MaxConnIdleTime:   &timeout,
