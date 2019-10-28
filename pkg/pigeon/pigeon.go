@@ -189,7 +189,13 @@ var mongoClient *mongo.Client
 
 func connectOnMongo() *mongo.Client {
 	log.Println("Connecting on MongoDB...")
-	opt := &options.ClientOptions{}
+	timeout := time.Duration(cast.ToInt(os.Getenv("MONGODB_TIMEOUT")))
+	opt := &options.ClientOptions{
+		ConnectTimeout:    &timeout,
+		MaxConnIdleTime:   &timeout,
+		HeartbeatInterval: &timeout,
+		LocalThreshold:    &timeout,
+	}
 	client, err := mongo.NewClient(opt.ApplyURI(os.Getenv("MONGODB_DSN")))
 	check(err)
 
