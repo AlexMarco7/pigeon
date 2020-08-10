@@ -3,6 +3,8 @@ package pigeon
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -134,6 +136,15 @@ func run(query string, data interface{}) (interface{}, error) {
 	ctx.PushGlobalGoFunction("log", func(c *duktape.Context) int {
 		fmt.Println(c.SafeToString(-1))
 		return 0
+	})
+
+	ctx.PushGlobalGoFunction("md5", func(ctx *duktape.Context) int {
+		params := ctx.SafeToString(-1)
+		hasher := md5.New()
+		hasher.Write([]byte(params))
+		decoded := hex.EncodeToString(hasher.Sum(nil))
+		ctx.PushString(decoded)
+		return 1
 	})
 
 	path := os.Getenv("QUERY_PATH")
